@@ -5,6 +5,8 @@ using NLog;
 using NLog.Config;
 using NLog.Targets;
 using System.Globalization;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace SupportBank
 {
@@ -73,18 +75,25 @@ namespace SupportBank
 
                 var newTransaction = new Transaction(date, from, to, narrative, amount);
 
-                if (!accounts.ContainsKey(from))
-                {
-                    accounts.Add(from, new Account(from));
-                }
+                newTransaction.UpdateAccounts(accounts);
+            }
 
-                if (!accounts.ContainsKey(to))
-                {
-                    accounts.Add(to, new Account(to));
-                }
+            return accounts;
+        }
 
-                accounts[from].AddTransaction(newTransaction);
-                accounts[to].AddTransaction(newTransaction);
+        static Dictionary<string, Account> ReadJSON(string filename)
+        {
+            List<Transaction> jsonItems;
+            using (StreamReader streamReader = new StreamReader(filename))
+            {
+                string serialized = streamReader.ReadToEnd();
+                jsonItems = JsonConvert.DeserializeObject<List<Transaction>>(serialized);
+            }
+
+            var accounts = new Dictionary<string, Account>();
+            foreach (var transaction in jsonItems)
+            {
+                transaction.UpdateAccounts(accounts);
             }
 
             return accounts;
