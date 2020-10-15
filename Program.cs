@@ -12,6 +12,28 @@ namespace SupportBank
     {
         private static readonly ILogger logger = LogManager.GetCurrentClassLogger();
 
+        private static void InitLog()
+        {
+            var config = new LoggingConfiguration();
+            var target = new FileTarget
+            {
+                FileName = @"C:\Work\Logs\SupportBank.log",
+                Layout = @"${longdate} ${level} - ${logger}: ${message}"
+            };
+            var consoleTarget = new ConsoleTarget
+            {
+                Name = @"Console",
+                Layout = @"${level} - ${message}"
+            };
+            config.AddTarget("File Logger", target);
+            config.AddTarget("Console Logger", consoleTarget);
+            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, target));
+            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Warn, consoleTarget));
+            LogManager.Configuration = config;
+
+            logger.Info("Logger initialised");
+        }
+
         static Dictionary<string, Account> ReadFile(string filename)
         {
             logger.Info($"Initialising parser for: { filename }.");
@@ -29,11 +51,10 @@ namespace SupportBank
             }
 
             var accounts = new Dictionary<string, Account>();
-            var line = 0;
 
             while (!parser.EndOfData)
             {
-                line++;
+                var line = parser.LineNumber;
                 var fields = parser.ReadFields();
 
                 var date = fields[0];
@@ -43,16 +64,12 @@ namespace SupportBank
 
                 if (!DateTime.TryParseExact(fields[0], "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dateTime))
                 {
-                    string message = $"Skipped line { line } due to invalid date: { fields[0] }.";
-                    Console.WriteLine(message);
-                    logger.Warn(message);
+                    logger.Warn($"Skipped line {line} due to invalid date: {fields[0]}.");
                 }
 
                 if (!decimal.TryParse(fields[4], out decimal amount))
                 {
-                    string message = $"Skipped line { line } due to invalid amount: { fields[4] }.";
-                    Console.WriteLine(message);
-                    logger.Warn(message);
+                    logger.Warn($"Skipped line {line} due to invalid amount: {fields[4]}.");
                 }
 
                 var newTransaction = new Transaction(date, from, to, narrative, amount);
@@ -139,14 +156,7 @@ namespace SupportBank
 
         static void Main(string[] args)
         {
-            var config = new LoggingConfiguration();
-            var target = new FileTarget { FileName = @"C:\Work\Logs\SupportBank.log", Layout = @"${longdate} ${level} - ${logger}: ${message}" };
-            config.AddTarget("File Logger", target);
-            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, target));
-            LogManager.Configuration = config;
-
-            logger.Info("Logger initialised");
-
+            InitLog();
             var accounts = ReadFile(@"DodgyTransactions2015.csv");
 
             while (true)
