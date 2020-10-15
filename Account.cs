@@ -2,25 +2,26 @@
 
 public class Account
 {
-	private string name;
-	private decimal balance;
+    public List<Transaction> Transactions { get; }
 
-	public List<Transaction> transactions { get; }
+    private string name;
+    private decimal balance;
 
-	public Account(string name)
-	{
-		this.name = name;
-		transactions = new List<Transaction>();
-	}
+    public Account(string name)
+    {
+        this.name = name;
+        Transactions = new List<Transaction>();
+    }
 
-	public void AddTransaction(Transaction newTrans)
-	{
-		transactions.Add(newTrans);
-		balance += newTrans.GetChange(name);
-	}
+    public void AddTransaction(Transaction newTrans)
+    {
+        Transactions.Add(newTrans);
 
-	public string GetSummary()
-	{
-		return string.Concat(name, " ", balance.ToString());
-	}
+        balance += newTrans.GetChangeForAccount(name);
+    }
+
+    public string GetSummary()
+    {
+        return string.Concat(name, " ", balance.ToString());
+    }
 }
