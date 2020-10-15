@@ -13,11 +13,11 @@ public class Account
         Transactions = new List<Transaction>();
     }
 
-    public void AddTransaction(Transaction newTrans)
+    public void AddTransaction(Transaction newTransaction)
     {
-        Transactions.Add(newTrans);
+        Transactions.Add(newTransaction);
 
-        balance += newTrans.GetChangeForAccount(name);
+        balance += newTransaction.GetChangeForAccount(name);
     }
 
     public string GetSummary()

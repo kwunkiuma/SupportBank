@@ -78,9 +78,9 @@ namespace SupportBank
 
         static void ListAccount(Dictionary<string, Account> accounts, string name)
         {
-            foreach (Transaction trans in accounts[name].Transactions)
+            foreach (Transaction transaction in accounts[name].Transactions)
             {
-                Console.WriteLine(trans.GetSummary());
+                Console.WriteLine(transaction.GetSummary());
             }
         }
 
@@ -112,7 +112,7 @@ namespace SupportBank
 
         static void Main(string[] args)
         {
-            Dictionary<string, Account> accounts = ReadFile();
+            var accounts = ReadFile();
 
             while (true)
             {

@@ -17,7 +17,7 @@
 
     public string GetSummary()
     {
-        return string.Join(" ", new string[] {date, narrative});
+        return $"{date} {narrative}";
     }
 
     public decimal GetChangeForAccount(string name)
