@@ -1,20 +1,26 @@
 ﻿using System;
 using Microsoft.VisualBasic.FileIO;
 using System.Collections.Generic;
+using NLog;
+using NLog.Config;
+using NLog.Targets;
+using System.Globalization;
 
 namespace SupportBank
 {
     class Program
     {
-        static Dictionary<string, Account> ReadFile() {
+        private static readonly ILogger logger = LogManager.GetCurrentClassLogger();
 
-            var accounts = new Dictionary<string, Account>();
-
-            var parser = new TextFieldParser(@"Transactions2014.csv")
+        static Dictionary<string, Account> ReadFile(string filename)
+        {
+            logger.Info($"Initialising parser for: { filename }.");
+            var parser = new TextFieldParser(filename)
             {
                 TextFieldType = FieldType.Delimited
             };
             parser.SetDelimiters(",");
+            logger.Info("Parser initialized, parsing file.");
 
             // Skip first line
             if (!parser.EndOfData)
@@ -22,15 +28,32 @@ namespace SupportBank
                 parser.ReadLine();
             }
 
+            var accounts = new Dictionary<string, Account>();
+            var line = 0;
+
             while (!parser.EndOfData)
             {
+                line++;
                 var fields = parser.ReadFields();
 
                 var date = fields[0];
                 var from = fields[1];
                 var to = fields[2];
                 var narrative = fields[3];
-                var amount = decimal.Parse(fields[4]);
+
+                if (!DateTime.TryParseExact(fields[0], "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dateTime))
+                {
+                    string message = $"Skipped line { line } due to invalid date: { fields[0] }.";
+                    Console.WriteLine(message);
+                    logger.Warn(message);
+                }
+
+                if (!decimal.TryParse(fields[4], out decimal amount))
+                {
+                    string message = $"Skipped line { line } due to invalid amount: { fields[4] }.";
+                    Console.WriteLine(message);
+                    logger.Warn(message);
+                }
 
                 var newTransaction = new Transaction(date, from, to, narrative, amount);
 
@@ -47,6 +70,7 @@ namespace SupportBank
                 accounts[from].AddTransaction(newTransaction);
                 accounts[to].AddTransaction(newTransaction);
             }
+
             return accounts;
         }
 
@@ -94,6 +118,7 @@ namespace SupportBank
             } while (!input.StartsWith("List "));
 
             string operand = input.Substring(5);
+            logger.Info($"User requested list for { operand }.");
 
             switch (operand)
             {
@@ -104,6 +129,8 @@ namespace SupportBank
                     if (!accounts.ContainsKey(operand))
                     {
                         Console.WriteLine("Account not found");
+                        logger.Error($"{ operand } does not exist.");
+                        break;
                     }
                     ListAccount(accounts, operand);
                     break;
@@ -112,7 +139,15 @@ namespace SupportBank
 
         static void Main(string[] args)
         {
-            var accounts = ReadFile();
+            var config = new LoggingConfiguration();
+            var target = new FileTarget { FileName = @"C:\Work\Logs\SupportBank.log", Layout = @"${longdate} ${level} - ${logger}: ${message}" };
+            config.AddTarget("File Logger", target);
+            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, target));
+            LogManager.Configuration = config;
+
+            logger.Info("Logger initialised");
+
+            var accounts = ReadFile(@"DodgyTransactions2015.csv");
 
             while (true)
             {
