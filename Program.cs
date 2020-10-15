@@ -36,7 +36,7 @@ namespace SupportBank
 
         static Dictionary<string, Account> ReadFile(string filename)
         {
-            logger.Info($"Initialising parser for: { filename }.");
+            logger.Info($"Initialising parser for: {filename}.");
             var parser = new TextFieldParser(filename)
             {
                 TextFieldType = FieldType.Delimited
@@ -135,7 +135,7 @@ namespace SupportBank
             } while (!input.StartsWith("List "));
 
             string operand = input.Substring(5);
-            logger.Info($"User requested list for { operand }.");
+            logger.Info($"User requested list for {operand}.");
 
             switch (operand)
             {
@@ -146,7 +146,7 @@ namespace SupportBank
                     if (!accounts.ContainsKey(operand))
                     {
                         Console.WriteLine("Account not found");
-                        logger.Error($"{ operand } does not exist.");
+                        logger.Error($"{operand} does not exist.");
                         break;
                     }
                     ListAccount(accounts, operand);
