@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public class OutputHelper
 {
-    public static void ListAll(Dictionary<string, Account> accounts)
+    static void ListAll(Dictionary<string, Account> accounts)
     {
         foreach (string name in accounts.Keys)
         {
@@ -12,7 +12,7 @@ public class OutputHelper
         }
     }
 
-    public static void ListAccount(Dictionary<string, Account> accounts, string name)
+    static void ListAccount(Dictionary<string, Account> accounts, string name)
     {
         foreach (Transaction transaction in accounts[name].Transactions)
         {
