@@ -36,7 +36,7 @@ namespace SupportBank
             logger.Info("Logger initialised");
         }
 
-        static Dictionary<string, Account> ReadFile(string filename)
+        static Dictionary<string, Account> ReadCSV(string filename)
         {
             logger.Info($"Initialising parser for: {filename}.");
             var parser = new TextFieldParser(filename)
@@ -78,11 +78,14 @@ namespace SupportBank
                 newTransaction.UpdateAccounts(accounts);
             }
 
+            logger.Info("Parsing successful.");
+
             return accounts;
         }
 
         static Dictionary<string, Account> ReadJSON(string filename)
         {
+            logger.Info($"Initialising parser for: {filename}.");
             List<Transaction> jsonItems;
             using (StreamReader streamReader = new StreamReader(filename))
             {
@@ -90,11 +93,15 @@ namespace SupportBank
                 jsonItems = JsonConvert.DeserializeObject<List<Transaction>>(serialized);
             }
 
+            logger.Info("Parser initialized, parsing file.");
+
             var accounts = new Dictionary<string, Account>();
             foreach (var transaction in jsonItems)
             {
                 transaction.UpdateAccounts(accounts);
             }
+
+            logger.Info("Parsing successful.");
 
             return accounts;
         }
@@ -132,16 +139,8 @@ namespace SupportBank
                 Console.WriteLine(transaction.GetSummary());
             }
         }
-
-        static void ExecuteCommand(Dictionary<string, Account> accounts)
+        static void ShowList(Dictionary<string, Account> accounts, string input)
         {
-            string input;
-
-            do
-            {
-                input = ReadConsole("Input a command: ");
-            } while (!input.StartsWith("List "));
-
             string operand = input.Substring(5);
             logger.Info($"User requested list for {operand}.");
 
@@ -162,10 +161,56 @@ namespace SupportBank
             }
         }
 
+        static void ImportFile(Dictionary<String, Account> accounts, string input)
+        {
+            string operand = input.Substring(12);
+            logger.Info($"User requested file import for {operand}.");
+
+            try
+            {
+                string extension = input.Substring(input.LastIndexOf("."));
+                switch (extension)
+                {
+                    case ".csv":
+                        accounts = ReadCSV(operand);
+                        break;
+                    case ".json":
+                        accounts = ReadJSON(operand);
+                        break;
+                    default:
+                        logger.Error($"Invalid file extension: {extension}.");
+                        break;
+                }
+            }
+            catch
+            {
+                logger.Error($"Invalid filename: {operand}.");
+            }
+        }
+     
+        static void ExecuteCommand(Dictionary<string, Account> accounts)
+        {
+            string input = ReadConsole("Input a command: ");
+
+            if (input.StartsWith("List "))
+            {
+                ShowList(accounts, input);
+                return;
+            }
+
+            if (input.StartsWith("Import File "))
+            {
+                ImportFile(accounts, input);
+                return;
+            }
+
+            logger.Error($"Invalid command; {input}.");
+        }
+
         static void Main(string[] args)
         {
             InitLog();
-            var accounts = ReadFile(@"DodgyTransactions2015.csv");
+            var accounts = ReadJSON(@"Transactions2013.json");
 
             while (true)
             {
