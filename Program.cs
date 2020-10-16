@@ -36,7 +36,23 @@ namespace SupportBank
             logger.Info("Logger initialised");
         }
 
-        static Dictionary<string, Account> ReadCSV(string filename)
+        static void AddTransaction(Dictionary<string, Account> accounts, Transaction transaction)
+        {
+            if (!accounts.ContainsKey(transaction.from))
+            {
+                accounts.Add(transaction.from, new Account(transaction.from));
+            }
+
+            if (!accounts.ContainsKey(transaction.to))
+            {
+                accounts.Add(transaction.to, new Account(transaction.to));
+            }
+
+            accounts[transaction.from].AddTransaction(transaction);
+            accounts[transaction.to].AddTransaction(transaction);
+        }
+
+        static void ReadCSV(Dictionary<string, Account> accounts, string filename)
         {
             logger.Info($"Initialising parser for: {filename}.");
             var parser = new TextFieldParser(filename)
@@ -51,8 +67,6 @@ namespace SupportBank
             {
                 parser.ReadLine();
             }
-
-            var accounts = new Dictionary<string, Account>();
 
             while (!parser.EndOfData)
             {
@@ -73,37 +87,31 @@ namespace SupportBank
                     logger.Warn($"Skipped line {line} due to invalid amount: {fields[4]}.");
                 }
 
-                var newTransaction = new Transaction(date, from, to, narrative, amount);
+                var transaction = new Transaction(date, from, to, narrative, amount);
 
-                newTransaction.UpdateAccounts(accounts);
+                AddTransaction(accounts, transaction);
+                
             }
 
             logger.Info("Parsing successful.");
-
-            return accounts;
         }
 
-        static Dictionary<string, Account> ReadJSON(string filename)
+        static void ReadJSON(Dictionary<string, Account> accounts, string filename)
         {
             logger.Info($"Initialising parser for: {filename}.");
             List<Transaction> jsonItems;
-            using (StreamReader streamReader = new StreamReader(filename))
-            {
-                string serialized = streamReader.ReadToEnd();
-                jsonItems = JsonConvert.DeserializeObject<List<Transaction>>(serialized);
-            }
+            using StreamReader streamReader = new StreamReader(filename);
+            string serialized = streamReader.ReadToEnd();
+            jsonItems = JsonConvert.DeserializeObject<List<Transaction>>(serialized);
 
             logger.Info("Parser initialized, parsing file.");
 
-            var accounts = new Dictionary<string, Account>();
             foreach (var transaction in jsonItems)
             {
-                transaction.UpdateAccounts(accounts);
+                AddTransaction(accounts, transaction);
             }
 
             logger.Info("Parsing successful.");
-
-            return accounts;
         }
 
         static string ReadConsole(string prompt)
@@ -124,43 +132,6 @@ namespace SupportBank
             return answer;
         }
 
-        static void ListAll(Dictionary<string, Account> accounts)
-        {
-            foreach (string name in accounts.Keys)
-            {
-                Console.WriteLine(accounts[name].GetSummary());
-            }
-        }
-
-        static void ListAccount(Dictionary<string, Account> accounts, string name)
-        {
-            foreach (Transaction transaction in accounts[name].Transactions)
-            {
-                Console.WriteLine(transaction.GetSummary());
-            }
-        }
-        static void ShowList(Dictionary<string, Account> accounts, string input)
-        {
-            string operand = input.Substring(5);
-            logger.Info($"User requested list for {operand}.");
-
-            switch (operand)
-            {
-                case "All":
-                    ListAll(accounts);
-                    break;
-                default:
-                    if (!accounts.ContainsKey(operand))
-                    {
-                        Console.WriteLine("Account not found");
-                        logger.Error($"{operand} does not exist.");
-                        break;
-                    }
-                    ListAccount(accounts, operand);
-                    break;
-            }
-        }
-
         static void ImportFile(Dictionary<String, Account> accounts, string input)
         {
             string operand = input.Substring(12);
@@ -172,10 +143,10 @@ namespace SupportBank
                 switch (extension)
                 {
                     case ".csv":
-                        accounts = ReadCSV(operand);
+                        ReadCSV(accounts, operand);
                         break;
                     case ".json":
-                        accounts = ReadJSON(operand);
+                        ReadJSON(accounts, operand);
                         break;
                     default:
                         logger.Error($"Invalid file extension: {extension}.");
@@ -194,7 +165,7 @@ namespace SupportBank
 
             if (input.StartsWith("List "))
             {
-                ShowList(accounts, input);
+                OutputHelper.ShowList(accounts, input, logger);
                 return;
             }
 
@@ -210,7 +181,8 @@ namespace SupportBank
         static void Main(string[] args)
         {
             InitLog();
-            var accounts = ReadJSON(@"Transactions2013.json");
+
+            var accounts = new Dictionary<string, Account>();
 
             while (true)
             {

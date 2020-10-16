@@ -3,12 +3,16 @@ using System.Collections.Generic;
 
 public class Transaction
 {
-    private string date;
     [JsonProperty("FromAccount")]
-    private string from;
+    public readonly string from;
     [JsonProperty("ToAccount")]
-    private string to;
+    public readonly string to;
+
+    [JsonProperty("Date")]
+    private string date;
+    [JsonProperty("Narrative")]
     private string narrative;
+    [JsonProperty("Amount")]
     private decimal amount;
 
     public Transaction(string date, string from, string to, string narrative, decimal amount)
@@ -42,17 +46,5 @@ public class Transaction
 
     public void UpdateAccounts(Dictionary<string, Account> accounts)
     {
-        if (!accounts.ContainsKey(from))
-        {
-            accounts.Add(from, new Account(from));
-        }
-
-        if (!accounts.ContainsKey(to))
-        {
-            accounts.Add(to, new Account(to));
-        }
-
-        accounts[from].AddTransaction(this);
-        accounts[to].AddTransaction(this);
     }
 }
