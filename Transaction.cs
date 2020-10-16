@@ -43,8 +43,4 @@ public class Transaction
 
         return 0;
     }
-
-    public void UpdateAccounts(Dictionary<string, Account> accounts)
-    {
-    }
 }

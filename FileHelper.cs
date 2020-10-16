@@ -8,9 +8,32 @@ using System.IO;
 
 public class FileHelper
 {
-	public FileHelper()
-	{
-	}
+    public static void ImportFile(Dictionary<String, Account> accounts, string input, ILogger logger)
+    {
+        var operand = input.Substring(12);
+        logger.Info($"User requested file import for {operand}.");
+
+        try
+        {
+            var extension = input.Substring(input.LastIndexOf("."));
+            switch (extension)
+            {
+                case ".csv":
+                    ReadCSV(accounts, operand, logger);
+                    break;
+                case ".json":
+                    ReadJSON(accounts, operand, logger);
+                    break;
+                default:
+                    logger.Error($"Invalid file extension: {extension}.");
+                    break;
+            }
+        }
+        catch
+        {
+            logger.Error($"Invalid filename: {operand}.");
+        }
+    }
 
     static void AddTransaction(Dictionary<string, Account> accounts, Transaction transaction)
     {
@@ -88,32 +111,5 @@ public class FileHelper
         }
 
         logger.Info("Parsing successful.");
-    }
-
-    public static void ImportFile(Dictionary<String, Account> accounts, string input, ILogger logger)
-    {
-        string operand = input.Substring(12);
-        logger.Info($"User requested file import for {operand}.");
-
-        try
-        {
-            string extension = input.Substring(input.LastIndexOf("."));
-            switch (extension)
-            {
-                case ".csv":
-                    ReadCSV(accounts, operand, logger);
-                    break;
-                case ".json":
-                    ReadJSON(accounts, operand, logger);
-                    break;
-                default:
-                    logger.Error($"Invalid file extension: {extension}.");
-                    break;
-            }
-        }
-        catch
-        {
-            logger.Error($"Invalid filename: {operand}.");
-        }
     }
 }
