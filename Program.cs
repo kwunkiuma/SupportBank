@@ -15,7 +15,7 @@ namespace SupportBank
         private static void InitLog()
         {
             var config = new LoggingConfiguration();
-            var target = new FileTarget
+            var fileTarget = new FileTarget
             {
                 FileName = @"C:\Work\Logs\SupportBank.log",
                 Layout = @"${longdate} ${level} - ${logger}: ${message}"
@@ -25,9 +25,9 @@ namespace SupportBank
                 Name = @"Console",
                 Layout = @"${level} - ${message}"
             };
-            config.AddTarget("File Logger", target);
+            config.AddTarget("File Logger", fileTarget);
             config.AddTarget("Console Logger", consoleTarget);
-            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, target));
+            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, fileTarget));
             config.LoggingRules.Add(new LoggingRule("*", LogLevel.Warn, consoleTarget));
             LogManager.Configuration = config;
 
@@ -61,8 +61,7 @@ namespace SupportBank
                 var from = fields[1];
                 var to = fields[2];
                 var narrative = fields[3];
-
-                if (!DateTime.TryParseExact(fields[0], "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dateTime))
+                if (!DateTime.TryParseExact(fields[0], "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
                 {
                     logger.Warn($"Skipped line {line} due to invalid date: {fields[0]}.");
                 }
