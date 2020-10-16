@@ -1,20 +1,48 @@
 ﻿using System;
 using Microsoft.VisualBasic.FileIO;
 using System.Collections.Generic;
+using NLog;
+using NLog.Config;
+using NLog.Targets;
+using System.Globalization;
 
 namespace SupportBank
 {
     class Program
     {
-        static Dictionary<string, Account> ReadFile() {
+        private static readonly ILogger logger = LogManager.GetCurrentClassLogger();
 
-            var accounts = new Dictionary<string, Account>();
+        private static void InitLog()
+        {
+            var config = new LoggingConfiguration();
+            var fileTarget = new FileTarget
+            {
+                FileName = @"C:\Work\Logs\SupportBank.log",
+                Layout = @"${longdate} ${level} - ${logger}: ${message}"
+            };
+            var consoleTarget = new ConsoleTarget
+            {
+                Name = @"Console",
+                Layout = @"${level} - ${message}"
+            };
+            config.AddTarget("File Logger", fileTarget);
+            config.AddTarget("Console Logger", consoleTarget);
+            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Debug, fileTarget));
+            config.LoggingRules.Add(new LoggingRule("*", LogLevel.Warn, consoleTarget));
+            LogManager.Configuration = config;
 
-            var parser = new TextFieldParser(@"Transactions2014.csv")
+            logger.Info("Logger initialised");
+        }
+
+        static Dictionary<string, Account> ReadFile(string filename)
+        {
+            logger.Info($"Initialising parser for: {filename}.");
+            var parser = new TextFieldParser(filename)
             {
                 TextFieldType = FieldType.Delimited
             };
             parser.SetDelimiters(",");
+            logger.Info("Parser initialized, parsing file.");
 
             // Skip first line
             if (!parser.EndOfData)
@@ -22,15 +50,26 @@ namespace SupportBank
                 parser.ReadLine();
             }
 
+            var accounts = new Dictionary<string, Account>();
+
             while (!parser.EndOfData)
             {
+                var line = parser.LineNumber;
                 var fields = parser.ReadFields();
 
                 var date = fields[0];
                 var from = fields[1];
                 var to = fields[2];
                 var narrative = fields[3];
-                var amount = decimal.Parse(fields[4]);
+                if (!DateTime.TryParseExact(fields[0], "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+                {
+                    logger.Warn($"Skipped line {line} due to invalid date: {fields[0]}.");
+                }
+
+                if (!decimal.TryParse(fields[4], out decimal amount))
+                {
+                    logger.Warn($"Skipped line {line} due to invalid amount: {fields[4]}.");
+                }
 
                 var newTransaction = new Transaction(date, from, to, narrative, amount);
 
@@ -47,6 +86,7 @@ namespace SupportBank
                 accounts[from].AddTransaction(newTransaction);
                 accounts[to].AddTransaction(newTransaction);
             }
+
             return accounts;
         }
 
@@ -94,6 +134,7 @@ namespace SupportBank
             } while (!input.StartsWith("List "));
 
             string operand = input.Substring(5);
+            logger.Info($"User requested list for {operand}.");
 
             switch (operand)
             {
@@ -104,6 +145,8 @@ namespace SupportBank
                     if (!accounts.ContainsKey(operand))
                     {
                         Console.WriteLine("Account not found");
+                        logger.Error($"{operand} does not exist.");
+                        break;
                     }
                     ListAccount(accounts, operand);
                     break;
@@ -112,7 +155,8 @@ namespace SupportBank
 
         static void Main(string[] args)
         {
-            var accounts = ReadFile();
+            InitLog();
+            var accounts = ReadFile(@"DodgyTransactions2015.csv");
 
             while (true)
             {
