@@ -5,6 +5,8 @@ using NLog;
 using NLog.Config;
 using NLog.Targets;
 using System.Globalization;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace SupportBank
 {
@@ -34,62 +36,6 @@ namespace SupportBank
             logger.Info("Logger initialised");
         }
 
-        static Dictionary<string, Account> ReadFile(string filename)
-        {
-            logger.Info($"Initialising parser for: {filename}.");
-            var parser = new TextFieldParser(filename)
-            {
-                TextFieldType = FieldType.Delimited
-            };
-            parser.SetDelimiters(",");
-            logger.Info("Parser initialized, parsing file.");
-
-            // Skip first line
-            if (!parser.EndOfData)
-            {
-                parser.ReadLine();
-            }
-
-            var accounts = new Dictionary<string, Account>();
-
-            while (!parser.EndOfData)
-            {
-                var line = parser.LineNumber;
-                var fields = parser.ReadFields();
-
-                var date = fields[0];
-                var from = fields[1];
-                var to = fields[2];
-                var narrative = fields[3];
-                if (!DateTime.TryParseExact(fields[0], "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
-                {
-                    logger.Warn($"Skipped line {line} due to invalid date: {fields[0]}.");
-                }
-
-                if (!decimal.TryParse(fields[4], out decimal amount))
-                {
-                    logger.Warn($"Skipped line {line} due to invalid amount: {fields[4]}.");
-                }
-
-                var newTransaction = new Transaction(date, from, to, narrative, amount);
-
-                if (!accounts.ContainsKey(from))
-                {
-                    accounts.Add(from, new Account(from));
-                }
-
-                if (!accounts.ContainsKey(to))
-                {
-                    accounts.Add(to, new Account(to));
-                }
-
-                accounts[from].AddTransaction(newTransaction);
-                accounts[to].AddTransaction(newTransaction);
-            }
-
-            return accounts;
-        }
-
         static string ReadConsole(string prompt)
         {
             string answer = null;
@@ -107,56 +53,31 @@ namespace SupportBank
 
             return answer;
         }
-
-        static void ListAll(Dictionary<string, Account> accounts)
-        {
-            foreach (string name in accounts.Keys)
-            {
-                Console.WriteLine(accounts[name].GetSummary());
-            }
-        }
-
-        static void ListAccount(Dictionary<string, Account> accounts, string name)
-        {
-            foreach (Transaction transaction in accounts[name].Transactions)
-            {
-                Console.WriteLine(transaction.GetSummary());
-            }
-        }
-
+     
         static void ExecuteCommand(Dictionary<string, Account> accounts)
         {
-            string input;
+            string input = ReadConsole("Input a command: ");
 
-            do
+            if (input.StartsWith("List "))
             {
-                input = ReadConsole("Input a command: ");
-            } while (!input.StartsWith("List "));
-
-            string operand = input.Substring(5);
-            logger.Info($"User requested list for {operand}.");
-
-            switch (operand)
-            {
-                case "All":
-                    ListAll(accounts);
-                    break;
-                default:
-                    if (!accounts.ContainsKey(operand))
-                    {
-                        Console.WriteLine("Account not found");
-                        logger.Error($"{operand} does not exist.");
-                        break;
-                    }
-                    ListAccount(accounts, operand);
-                    break;
+                OutputHelper.ShowList(accounts, input, logger);
+                return;
             }
+
+            if (input.StartsWith("Import File "))
+            {
+                FileHelper.ImportFile(accounts, input, logger);
+                return;
+            }
+
+            logger.Error($"Invalid command; {input}.");
         }
 
         static void Main(string[] args)
         {
             InitLog();
-            var accounts = ReadFile(@"DodgyTransactions2015.csv");
+
+            var accounts = new Dictionary<string, Account>();
 
             while (true)
             {

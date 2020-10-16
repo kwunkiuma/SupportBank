@@ -1,9 +1,18 @@
-﻿public class Transaction
+﻿using Newtonsoft.Json;
+using System.Collections.Generic;
+
+public class Transaction
 {
+    [JsonProperty("FromAccount")]
+    public readonly string from;
+    [JsonProperty("ToAccount")]
+    public readonly string to;
+
+    [JsonProperty("Date")]
     private string date;
-    private string from;
-    private string to;
+    [JsonProperty("Narrative")]
     private string narrative;
+    [JsonProperty("Amount")]
     private decimal amount;
 
     public Transaction(string date, string from, string to, string narrative, decimal amount)
